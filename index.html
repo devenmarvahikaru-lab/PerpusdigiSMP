@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BPPK-Lib - Perpustakaan Digital SMP KRISTEN BPPK BANDUNG</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        academia: {
+                            bg: '#120f0e',
+                            card: '#1c1614',
+                            accent: '#c9a050',
+                            accentHover: '#e5b865',
+                            parchment: '#dfd3c3',
+                            subtle: '#8c7b70',
+                            border: '#382b24',
+                            wood: '#2a201c',
+                            crimson: '#6b1d1d'
+                        }
+                    },
+                    fontFamily: {
+                        serif: ['Cormorant Garamond', 'Georgia', 'serif'],
+                        display: ['Cinzel', 'serif'],
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=Cormorant Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDK Modules -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, deleteDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global Firebase Configuration & State Initialization
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'bppk-lib-app';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' 
+            ? JSON.parse(__firebase_config) 
+            : {
+                // Fallback default config structure
+                apiKey: "demo-key",
+                authDomain: "bppk-lib.firebaseapp.com",
+                projectId: "bppk-lib",
+                storageBucket: "bppk-lib.appspot.com",
+                messagingSenderId: "123456789",
+                appId: "1:123456789:web:demo"
+            };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        window.dbInstance = db;
+        window.appIdInstance = appId;
+
+        // Perform Authentication first before Firestore Operations
+        async function initAuth() {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (err) {
+                console.warn("Auth initialization notice:", err);
+            }
+        }
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                window.currentUser = user;
+                if (window.subscribeToBooksCloud) {
+                    window.subscribeToBooksCloud();
+                }
+            }
+        });
+
+        initAuth();
+    </script>
+
+    <!-- PDF.js library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script>
+        if (typeof pdfjsLib !== 'undefined') {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Cormorant Garamond', serif;
+            background-color: #120f0e;
+            color: #dfd3c3;
+            user-select: none;
+        }
+
+        .font-display {
+            font-family: 'Cinzel', serif;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #120f0e;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2a201c;
+            border: 1px solid rgba(201, 160, 80, 0.2);
+        }
+
+        .wood-panel {
+            background-color: #1c1614;
+            border: 1px solid rgba(201, 160, 80, 0.15);
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased">
+
+    <!-- TOP NAVBAR -->
+    <header class="sticky top-0 z-40 bg-[#16110f]/95 backdrop-blur-md border-b border-academia-accent/20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20 gap-2 sm:gap-4">
+                
+                <!-- Brand Title & School Logo -->
+                <div class="flex items-center gap-2.5 cursor-pointer" onclick="switchView('catalog')">
+                    <div class="w-9 h-9 sm:w-10 sm:h-10 rounded bg-academia-wood border border-academia-accent/40 flex items-center justify-center p-1 overflow-hidden shrink-0">
+                        <img id="headerSchoolLogo" src="https://images.unsplash.com/photo-1532012197267-da84d127e765?w=100&auto=format&fit=crop&q=80" onerror="this.onerror=null; this.src='https://placehold.co/100x100/1c1614/c9a050?text=BPPK';" alt="Logo BPPK" class="w-full h-full object-contain">
+                    </div>
+                    <div class="min-w-0">
+                        <span class="font-display font-bold text-base sm:text-xl text-academia-parchment truncate block">BPPK-Lib</span>
+                        <p class="text-[9px] sm:text-[10px] font-serif text-academia-subtle italic truncate">SMP KRISTEN BPPK</p>
+                    </div>
+                </div>
+
+                <!-- Instant Search Bar -->
+                <div class="flex-1 max-w-xs sm:max-w-md relative hidden md:block">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-academia-subtle">
+                        <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                    </div>
+                    <input type="text" id="searchInput" oninput="handleSearch()" placeholder="Cari dalam arsip judul, penulis..." 
+                           class="w-full pl-8 pr-8 py-1.5 bg-academia-bg border border-academia-accent/20 text-xs text-academia-parchment font-serif focus:outline-none focus:border-academia-accent">
+                </div>
+
+                <!-- Navigation Action Buttons -->
+                <div class="flex items-center gap-1.5 sm:gap-2">
+                    <button onclick="openAdminModal()" class="px-2 py-1.5 sm:px-3 sm:py-2 bg-academia-wood hover:bg-academia-card border border-academia-accent/20 text-academia-accent text-xs flex items-center gap-1.5">
+                        <i class="fa-solid fa-user-shield"></i>
+                        <span class="hidden sm:inline">Petugas</span>
+                        <span id="pendingBadge" class="hidden bg-amber-600 text-white font-bold text-[9px] px-1.5 rounded-full">0</span>
+                    </button>
+
+                    <button onclick="openUploadModal()" class="px-2.5 py-1.5 sm:px-3.5 sm:py-2 bg-academia-crimson hover:bg-red-900 border border-academia-accent/30 text-academia-parchment font-display text-xs uppercase flex items-center gap-1.5 shadow">
+                        <i class="fa-solid fa-feather-pointed text-academia-accent"></i>
+                        <span class="text-[11px] sm:text-xs">Unggah PDF</span>
+                    </button>
+
+                    <button onclick="openBookmarkModal()" class="px-2 py-1.5 sm:px-3 sm:py-2 bg-academia-wood hover:bg-academia-card border border-academia-accent/20 text-academia-parchment text-xs flex items-center gap-1.5">
+                        <i class="fa-solid fa-bookmark text-academia-accent"></i>
+                        <span class="hidden sm:inline">Koleksi</span>
+                        <span id="bookmarkCount" class="bg-academia-accent text-academia-bg font-bold text-[10px] px-1.5 rounded-full">0</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Search Dropdown -->
+        <div class="md:hidden px-4 pb-3 border-t border-academia-accent/10 pt-2">
+            <div class="relative">
+                <input type="text" id="searchInputMobile" oninput="handleSearchMobile()" placeholder="Cari judul atau penulis..." 
+                       class="w-full pl-8 pr-3 py-1.5 bg-academia-bg border border-academia-accent/20 text-xs text-academia-parchment font-serif">
+                <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-xs text-academia-subtle"></i>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CATALOG VIEW -->
+    <main id="catalogView" class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <section class="space-y-4">
+            <div class="flex items-center justify-between border-b border-academia-accent/15 pb-3">
+                <div>
+                    <h1 class="font-display text-lg sm:text-2xl font-bold tracking-wider text-academia-parchment">Arsip Utama Koleksi</h1>
+                    <p class="text-[11px] sm:text-xs font-serif italic text-academia-subtle">Seluruh e-book & manuskrip terintegrasi dari Google Drive Sekolah</p>
+                </div>
+                <span id="itemCount" class="text-xs font-serif text-academia-accent italic bg-academia-wood px-2.5 py-1 border border-academia-accent/20 shrink-0">0 Berkas</span>
+            </div>
+            
+            <div class="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
+                <button onclick="filterCategory('all')" class="cat-btn px-3 py-1.5 text-[11px] font-display uppercase tracking-wider bg-academia-accent text-academia-bg border border-academia-accent shrink-0">
+                    Semua Berkas
+                </button>
+                <button onclick="filterCategory('Komik')" class="cat-btn px-3 py-1.5 text-[11px] font-serif italic bg-academia-wood text-academia-parchment border border-academia-accent/20 hover:border-academia-accent shrink-0">
+                    Komik & Manhwa
+                </button>
+                <button onclick="filterCategory('Klasik')" class="cat-btn px-3 py-1.5 text-[11px] font-serif italic bg-academia-wood text-academia-parchment border border-academia-accent/20 hover:border-academia-accent shrink-0">
+                    Sastra & Novel Klasik
+                </button>
+                <button onclick="filterCategory('Pelajaran')" class="cat-btn px-3 py-1.5 text-[11px] font-serif italic bg-academia-wood text-academia-parchment border border-academia-accent/20 hover:border-academia-accent shrink-0">
+                    Manuskrip Pelajaran
+                </button>
+                <button onclick="filterCategory('Unggahan')" class="cat-btn px-3 py-1.5 text-[11px] font-serif italic bg-academia-crimson/80 text-academia-parchment border border-academia-accent/30 hover:border-academia-accent shrink-0">
+                    <i class="fa-solid fa-user-check mr-1 text-academia-accent"></i> Hasil Upload Disetujui
+                </button>
+            </div>
+        </section>
+
+        <!-- BOOK GRID CATALOG -->
+        <section>
+            <div id="bookGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-6">
+                <!-- Dynamic cards -->
+            </div>
+
+            <div id="emptyState" class="hidden text-center py-16 space-y-3">
+                <div class="w-12 h-12 border border-academia-accent/30 text-academia-accent flex items-center justify-center mx-auto text-xl">
+                    <i class="fa-solid fa-scroll"></i>
+                </div>
+                <h3 class="font-display text-sm tracking-wider uppercase text-academia-parchment">Manuskrip Belum Tersedia</h3>
+                <p class="text-xs font-serif italic text-academia-subtle max-w-xs mx-auto">Gunakan tombol "Unggah PDF" di atas untuk menambahkan koleksi e-book / PDF ke dalam perpustakaan digital.</p>
+                <button onclick="filterCategory('all'); clearSearch();" class="mt-2 px-4 py-1.5 bg-academia-wood border border-academia-accent/40 text-academia-accent text-xs font-serif">Reset Pencarian</button>
+            </div>
+        </section>
+    </main>
+
+    <!-- CLASSIC READER VIEW -->
+    <div id="readerView" class="fixed inset-0 z-50 bg-[#0a0807] hidden flex-col select-none overflow-hidden">
+        <header class="sticky top-0 z-30 bg-[#16110f]/95 border-b border-academia-accent/20 px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <button onclick="switchView('catalog')" class="w-8 h-8 bg-academia-wood border border-academia-accent/30 text-academia-accent flex items-center justify-center">
+                    <i class="fa-solid fa-arrow-left text-xs"></i>
+                </button>
+                <div class="overflow-hidden max-w-[180px] sm:max-w-md">
+                    <h3 id="readerBookTitle" class="font-display text-xs sm:text-sm text-academia-parchment truncate">Judul Buku</h3>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button onclick="toggleFullScreen()" class="w-8 h-8 bg-academia-wood border border-academia-accent/20 text-academia-accent flex items-center justify-center">
+                    <i class="fa-solid fa-expand text-xs"></i>
+                </button>
+            </div>
+        </header>
+
+        <div id="readerBody" class="flex-1 overflow-y-auto relative flex flex-col items-center py-4">
+            <div id="verticalReaderContainer" class="w-full max-w-3xl px-2"></div>
+        </div>
+    </div>
+
+    <!-- BOOK DETAIL MODAL -->
+    <div id="detailModal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="wood-panel rounded-none max-w-xl w-full p-5 relative max-h-[90vh] flex flex-col overflow-y-auto">
+            <button onclick="closeModal()" class="absolute top-3 right-3 w-7 h-7 bg-academia-wood border border-academia-accent/30 text-academia-accent flex items-center justify-center">
+                <i class="fa-solid fa-xmark text-xs"></i>
+            </button>
+
+            <div class="flex flex-col sm:flex-row gap-5">
+                <div class="w-32 sm:w-40 shrink-0 mx-auto sm:mx-0 bg-academia-bg border border-academia-accent/30">
+                    <img id="modalCover" src="" alt="Cover" class="w-full h-48 object-cover">
+                </div>
+
+                <div class="flex-1 space-y-2 text-center sm:text-left">
+                    <h2 id="modalTitle" class="text-lg font-display font-bold text-academia-parchment">Judul Buku</h2>
+                    <p id="modalAuthor" class="text-xs font-serif italic text-academia-accent">Penulis</p>
+                    <p id="modalSynopsis" class="text-academia-parchment/80 text-xs font-serif italic line-clamp-3">Deskripsi...</p>
+
+                    <div class="pt-2 flex flex-wrap gap-2 justify-center sm:justify-start">
+                        <button id="modalStartReadBtn" class="px-4 py-1.5 bg-academia-accent text-academia-bg font-display font-bold text-xs uppercase">Mulai Baca</button>
+                        <button id="modalBookmarkBtn" class="px-3 py-1.5 bg-academia-wood border border-academia-accent/30 text-academia-parchment text-xs">Simpan</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- UPLOAD MODAL -->
+    <div id="uploadModal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="wood-panel max-w-md w-full p-5 space-y-4 relative">
+            <div class="flex items-center justify-between border-b border-academia-accent/20 pb-2">
+                <h3 class="font-display text-xs text-academia-accent uppercase">Unggah Berkas PDF Baru</h3>
+                <button onclick="closeUploadModal()" class="text-academia-subtle"><i class="fa-solid fa-xmark text-sm"></i></button>
+            </div>
+
+            <form id="uploadForm" onsubmit="handleFormUpload(event)" class="space-y-3 text-xs font-serif">
+                <div>
+                    <label class="block text-academia-parchment mb-1">Judul Buku / File *</label>
+                    <input type="text" id="upTitle" required class="w-full p-2 bg-academia-bg border border-academia-accent/30 text-academia-parchment">
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-academia-parchment mb-1">Penulis</label>
+                        <input type="text" id="upAuthor" class="w-full p-2 bg-academia-bg border border-academia-accent/30 text-academia-parchment">
+                    </div>
+                    <div>
+                        <label class="block text-academia-parchment mb-1">Kategori</label>
+                        <select id="upCategory" class="w-full p-2 bg-academia-bg border border-academia-accent/30 text-academia-parchment">
+                            <option value="Unggahan">Unggahan Siswa</option>
+                            <option value="Komik">Komik & Manhwa</option>
+                            <option value="Klasik">Sastra & Novel</option>
+                            <option value="Pelajaran">Manuskrip Pelajaran</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-academia-parchment mb-1">File PDF *</label>
+                    <input type="file" id="upPdfFile" accept="application/pdf" required class="w-full p-1 bg-academia-bg border border-academia-accent/30 text-academia-subtle">
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeUploadModal()" class="px-3 py-1.5 bg-academia-wood text-academia-parchment">Batal</button>
+                    <button type="submit" class="px-4 py-1.5 bg-academia-accent text-academia-bg font-bold uppercase">Kirim PDF</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- PETUGAS MODAL -->
+    <div id="adminModal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="wood-panel max-w-lg w-full p-5 space-y-4 relative">
+            <div class="flex items-center justify-between border-b border-academia-accent/20 pb-2">
+                <h3 class="font-display text-xs text-academia-accent uppercase">Portal Petugas & Logo Sekolah</h3>
+                <button onclick="closeAdminModal()" class="text-academia-subtle"><i class="fa-solid fa-xmark text-sm"></i></button>
+            </div>
+
+            <div id="adminLoginForm" class="space-y-3 py-2 text-center max-w-xs mx-auto font-serif">
+                <p class="text-xs text-academia-subtle">Masukkan Kata Sandi Moderasi:</p>
+                <input type="password" id="adminPassword" class="w-full p-2 bg-academia-bg border border-academia-accent/30 text-center text-academia-parchment text-sm">
+                <button onclick="handleAdminLogin()" class="w-full py-1.5 bg-academia-accent text-academia-bg font-bold text-xs uppercase">Masuk</button>
+            </div>
+
+            <div id="adminDashboard" class="hidden space-y-4 font-serif">
+                <div class="bg-academia-bg p-3 border border-academia-accent/20 space-y-2">
+                    <h4 class="text-xs font-display text-academia-accent uppercase">Upload / Ganti Logo Sekolah</h4>
+                    <div class="flex items-center gap-2">
+                        <input type="file" id="adminLogoInput" accept="image/*" class="text-xs text-academia-subtle">
+                        <button onclick="saveAdminLogo()" class="px-3 py-1 bg-academia-accent text-academia-bg text-xs font-bold uppercase">Simpan</button>
+                    </div>
+                </div>
+                <div id="pendingListContainer" class="space-y-2 max-h-60 overflow-y-auto"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BOOKMARK MODAL -->
+    <div id="bookmarkModal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="wood-panel max-w-md w-full p-5 space-y-3 relative">
+            <div class="flex items-center justify-between border-b border-academia-accent/20 pb-2">
+                <h3 class="font-display text-xs text-academia-accent uppercase">Koleksi Tersimpan</h3>
+                <button onclick="closeBookmarkModal()" class="text-academia-subtle"><i class="fa-solid fa-xmark text-sm"></i></button>
+            </div>
+            <div id="bookmarkList" class="space-y-2 max-h-60 overflow-y-auto"></div>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="mt-auto border-t border-academia-accent/15 bg-[#0e0c0b] py-6">
+        <div class="max-w-7xl mx-auto px-4 text-center font-serif text-xs text-academia-subtle space-y-2">
+            <div class="flex items-center justify-center gap-2">
+                <img id="footerSchoolLogo" src="https://images.unsplash.com/photo-1532012197267-da84d127e765?w=100&auto=format&fit=crop&q=80" onerror="this.onerror=null; this.src='https://placehold.co/100x100/1c1614/c9a050?text=BPPK';" alt="Logo Sekolah" class="w-5 h-5 object-contain">
+                <span class="font-display text-academia-parchment uppercase">BPPK-Lib</span> — SMP KRISTEN BPPK BANDUNG
+            </div>
+            <p>© 2026 Perpustakaan Digital Sekolah.</p>
+        </div>
+    </footer>
+
+    <!-- JAVASCRIPT SYSTEM -->
+    <script>
+        const ADMIN_PASS = '14391';
+
+        // Clean initial array for Production Release
+        const DEFAULT_GLOBAL_BOOKS = [];
+
+        let booksData = [];
+        let currentFilter = 'all';
+        let searchQuery = '';
+        let activeBook = null;
+        let isAdminLoggedIn = false;
+        let bookmarks = JSON.parse(localStorage.getItem('athenaeum_bookmarks') || '[]');
+
+        window.onload = () => {
+            loadSavedLogo();
+            renderCatalog();
+            updatePendingBadge();
+            updateBookmarkCount();
+        };
+
+        // Real-time Cloud Synchronization Listener
+        window.subscribeToBooksCloud = function() {
+            if (!window.dbInstance || !window.currentUser) return;
+            const db = window.dbInstance;
+            const appId = window.appIdInstance;
+            
+            // Collection Path for Public Books Data
+            const booksCol = collection(db, 'artifacts', appId, 'public', 'data', 'books');
+
+            onSnapshot(booksCol, (snapshot) => {
+                const cloudBooks = [];
+                snapshot.forEach(docSnap => {
+                    cloudBooks.push({ id: docSnap.id, ...docSnap.data() });
+                });
+                
+                booksData = cloudBooks;
+                renderCatalog();
+                updatePendingBadge();
+                if (isAdminLoggedIn) {
+                    renderPendingList();
+                }
+            }, (error) => {
+                console.error("Cloud sync snapshot error:", error);
+            });
+        };
+
+        function loadSavedLogo() {
+            const customLogo = localStorage.getItem('bppk_school_logo');
+            if (customLogo) {
+                document.getElementById('headerSchoolLogo').src = customLogo;
+                document.getElementById('footerSchoolLogo').src = customLogo;
+            }
+        }
+
+        function saveAdminLogo() {
+            const logoFile = document.getElementById('adminLogoInput').files[0];
+            if (!logoFile) return alert('Pilih gambar logo terlebih dahulu!');
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                localStorage.setItem('bppk_school_logo', e.target.result);
+                loadSavedLogo();
+                alert('Logo berhasil diperbarui!');
+            };
+            reader.readAsDataURL(logoFile);
+        }
+
+        function renderCatalog() {
+            const grid = document.getElementById('bookGrid');
+            const emptyState = document.getElementById('emptyState');
+            grid.innerHTML = '';
+
+            const filtered = booksData.filter(book => {
+                const isApproved = book.status === 'approved';
+                const matchesCategory = currentFilter === 'all' || book.category === currentFilter;
+                const matchesSearch = book.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                                      (book.author && book.author.toLowerCase().includes(searchQuery.toLowerCase()));
+                return isApproved && matchesCategory && matchesSearch;
+            });
+
+            document.getElementById('itemCount').innerText = `${filtered.length} Berkas`;
+
+            if (filtered.length === 0) {
+                emptyState.classList.remove('hidden');
+            } else {
+                emptyState.classList.add('hidden');
+                filtered.forEach(book => {
+                    const isBookmarked = bookmarks.includes(book.id);
+                    const card = document.createElement('div');
+                    card.className = 'wood-panel p-2 flex flex-col justify-between cursor-pointer space-y-2';
+                    card.innerHTML = `
+                        <div class="relative aspect-[3/4] w-full bg-academia-bg" onclick="openModal('${book.id}')">
+                            <img src="${book.cover || 'https://placehold.co/400x600/1c1614/c9a050?text=BPPK+Lib'}" alt="${book.title}" class="w-full h-full object-cover">
+                            <button onclick="event.stopPropagation(); toggleBookmark('${book.id}')" class="absolute top-1 right-1 w-6 h-6 bg-black/70 text-xs ${isBookmarked ? 'text-academia-accent' : 'text-academia-subtle'}">
+                                <i class="${isBookmarked ? 'fa-solid' : 'fa-regular'} fa-bookmark"></i>
+                            </button>
+                        </div>
+                        <div onclick="openModal('${book.id}')">
+                            <h3 class="font-display text-xs text-academia-parchment truncate">${book.title}</h3>
+                            <p class="text-[10px] font-serif italic text-academia-subtle truncate">${book.author || 'SMP KRISTEN BPPK'}</p>
+                        </div>
+                        <button onclick="openReader('${book.id}')" class="w-full py-1 bg-academia-wood hover:bg-academia-accent hover:text-academia-bg text-academia-accent text-xs font-serif border border-academia-accent/20">Baca</button>
+                    `;
+                    grid.appendChild(card);
+                });
+            }
+        }
+
+        function filterCategory(cat) {
+            currentFilter = cat;
+            renderCatalog();
+        }
+
+        function handleSearch() {
+            searchQuery = document.getElementById('searchInput').value;
+            renderCatalog();
+        }
+
+        function handleSearchMobile() {
+            searchQuery = document.getElementById('searchInputMobile').value;
+            renderCatalog();
+        }
+
+        function clearSearch() {
+            searchQuery = '';
+            document.getElementById('searchInput').value = '';
+            document.getElementById('searchInputMobile').value = '';
+            renderCatalog();
+        }
+
+        function openAdminModal() {
+            document.getElementById('adminModal').classList.remove('hidden');
+            document.getElementById('adminModal').classList.add('flex');
+        }
+
+        function closeAdminModal() {
+            document.getElementById('adminModal').classList.add('hidden');
+            document.getElementById('adminModal').classList.remove('flex');
+        }
+
+        function handleAdminLogin() {
+            if (document.getElementById('adminPassword').value === ADMIN_PASS) {
+                isAdminLoggedIn = true;
+                document.getElementById('adminLoginForm').classList.add('hidden');
+                document.getElementById('adminDashboard').classList.remove('hidden');
+                renderPendingList();
+            } else {
+                alert('Kata sandi salah!');
+            }
+        }
+
+        function renderPendingList() {
+            const container = document.getElementById('pendingListContainer');
+            container.innerHTML = '';
+            const pendingBooks = booksData.filter(b => b.status === 'pending');
+            if (pendingBooks.length === 0) {
+                container.innerHTML = `<p class="text-xs text-academia-subtle italic text-center">Tidak ada antrean usulan.</p>`;
+                return;
+            }
+            pendingBooks.forEach(book => {
+                const item = document.createElement('div');
+                item.className = 'p-2 bg-academia-bg border border-academia-accent/20 flex items-center justify-between text-xs';
+                item.innerHTML = `
+                    <span class="truncate max-w-[150px] text-academia-parchment">${book.title}</span>
+                    <div class="flex gap-1">
+                        <button onclick="approveBook('${book.id}')" class="px-2 py-0.5 bg-emerald-800 text-white text-[10px]">Setujui</button>
+                        <button onclick="rejectBook('${book.id}')" class="px-2 py-0.5 bg-red-900 text-white text-[10px]">Hapus</button>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        async function approveBook(id) {
+            if (!window.dbInstance || !window.currentUser) return;
+            try {
+                const db = window.dbInstance;
+                const appId = window.appIdInstance;
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'books', id);
+                await updateDoc(docRef, { status: 'approved' });
+            } catch (err) {
+                console.error("Error approving book:", err);
+            }
+        }
+
+        async function rejectBook(id) {
+            if (!window.dbInstance || !window.currentUser) return;
+            try {
+                const db = window.dbInstance;
+                const appId = window.appIdInstance;
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'books', id);
+                await deleteDoc(docRef);
+            } catch (err) {
+                console.error("Error rejecting book:", err);
+            }
+        }
+
+        function updatePendingBadge() {
+            const pendingCount = booksData.filter(b => b.status === 'pending').length;
+            const badge = document.getElementById('pendingBadge');
+            badge.innerText = pendingCount;
+            badge.classList.toggle('hidden', pendingCount === 0);
+        }
+
+        function toggleBookmark(id) {
+            const idx = bookmarks.indexOf(id);
+            if (idx > -1) bookmarks.splice(idx, 1);
+            else bookmarks.push(id);
+            localStorage.setItem('athenaeum_bookmarks', JSON.stringify(bookmarks));
+            updateBookmarkCount();
+            renderCatalog();
+        }
+
+        function updateBookmarkCount() {
+            document.getElementById('bookmarkCount').innerText = bookmarks.length;
+        }
+
+        function openBookmarkModal() {
+            document.getElementById('bookmarkModal').classList.remove('hidden');
+            document.getElementById('bookmarkModal').classList.add('flex');
+        }
+
+        function closeBookmarkModal() {
+            document.getElementById('bookmarkModal').classList.add('hidden');
+            document.getElementById('bookmarkModal').classList.remove('flex');
+        }
+
+        function openUploadModal() {
+            document.getElementById('uploadModal').classList.remove('hidden');
+            document.getElementById('uploadModal').classList.add('flex');
+        }
+
+        function closeUploadModal() {
+            document.getElementById('uploadModal').classList.add('hidden');
+            document.getElementById('uploadModal').classList.remove('flex');
+        }
+
+        async function handleFormUpload(e) {
+            e.preventDefault();
+            const title = document.getElementById('upTitle').value;
+            const author = document.getElementById('upAuthor').value || 'Siswa BPPK';
+            const category = document.getElementById('upCategory').value;
+            const fileInput = document.getElementById('upPdfFile');
+
+            if (!fileInput.files[0]) {
+                return alert('Silakan pilih berkas PDF!');
+            }
+
+            const bookId = 'book_' + Date.now();
+            const pdfFile = fileInput.files[0];
+
+            // Convert File to Object URL / Data Storage string safely
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                const pdfDataUrl = event.target.result;
+
+                const newBook = {
+                    title: title,
+                    author: author,
+                    category: category,
+                    rating: 5.0,
+                    synopsis: 'Manuskrip unggahan perpustakaan.',
+                    cover: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=500&auto=format&fit=crop&q=80',
+                    driveEmbedUrl: pdfDataUrl,
+                    status: 'pending',
+                    timestamp: Date.now()
+                };
+
+                if (window.dbInstance && window.currentUser) {
+                    try {
+                        const db = window.dbInstance;
+                        const appId = window.appIdInstance;
+                        const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'books', bookId);
+                        await setDoc(docRef, newBook);
+                        closeUploadModal();
+                        document.getElementById('uploadForm').reset();
+                        alert('Berkas PDF berhasil dikirim ke Cloud dan masuk antrean kurasi!');
+                    } catch (err) {
+                        console.error("Upload Error:", err);
+                        alert('Gagal mengirim file ke Cloud. Silakan coba lagi.');
+                    }
+                } else {
+                    alert('Sistem belum siap. Coba sebentar lagi.');
+                }
+            };
+            reader.readAsDataURL(pdfFile);
+        }
+
+        function openModal(id) {
+            activeBook = booksData.find(b => b.id === id);
+            if (!activeBook) return;
+            document.getElementById('modalCover').src = activeBook.cover || 'https://placehold.co/400x600/1c1614/c9a050?text=BPPK+Lib';
+            document.getElementById('modalTitle').innerText = activeBook.title;
+            document.getElementById('modalAuthor').innerText = activeBook.author || 'Penulis';
+            document.getElementById('modalSynopsis').innerText = activeBook.synopsis || 'Deskripsi manuskrip...';
+
+            document.getElementById('modalStartReadBtn').onclick = () => { closeModal(); openReader(activeBook.id); };
+            document.getElementById('detailModal').classList.remove('hidden');
+            document.getElementById('detailModal').classList.add('flex');
+        }
+
+        function closeModal() {
+            document.getElementById('detailModal').classList.add('hidden');
+            document.getElementById('detailModal').classList.remove('flex');
+        }
+
+        function switchView(v) {
+            if (v === 'catalog') {
+                document.getElementById('readerView').classList.add('hidden');
+                document.getElementById('catalogView').classList.remove('hidden');
+            }
+        }
+
+        function openReader(id) {
+            activeBook = booksData.find(b => b.id === id);
+            if (!activeBook) return;
+            document.getElementById('catalogView').classList.add('hidden');
+            document.getElementById('readerView').classList.remove('hidden');
+            document.getElementById('readerView').classList.add('flex');
+            document.getElementById('readerBookTitle').innerText = activeBook.title;
+
+            const container = document.getElementById('verticalReaderContainer');
+            container.innerHTML = `
+                <div class="w-full h-[80vh] bg-academia-wood p-1 border border-academia-accent/30 shadow-2xl">
+                    <iframe src="${activeBook.driveEmbedUrl}" class="w-full h-full border-none" allow="autoplay; encrypted-media"></iframe>
+                </div>
+            `;
+        }
+
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) { document.documentElement.requestFullscreen().catch(()=>{}); }
+            else if (document.exitFullscreen) { document.exitFullscreen(); }
+        }
+    </script>
+</body>
+</html>
+```
