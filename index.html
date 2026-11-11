@@ -1,0 +1,1262 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BPPK-Lib | Perpustakaan Digital SMPK BPPK Bandung</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Playfair Display & Cormorant Garamond & Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- PDF.js library for rendering PDF pages as Manhwa/Manga continuous images -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+
+    <!-- Tailwind Config for Authentic Dark Academia Theme -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        academia: {
+                            950: '#0d0a07',
+                            900: '#17120e',
+                            850: '#211a14',
+                            800: '#2d231b',
+                            700: '#3e3025',
+                            600: '#544234',
+                            gold: '#c9a050',
+                            'gold-hover': '#dfb96c',
+                            parchment: '#eee3cf',
+                            muted: '#a3927d',
+                            crimson: '#5c1d24',
+                            paper: '#f4ede2',
+                        }
+                    },
+                    fontFamily: {
+                        serif: ['Playfair Display', 'serif'],
+                        garamond: ['Cormorant Garamond', 'serif'],
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #120e0b;
+            color: #ece3d4;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        .book-card {
+            background: #1b1510;
+            border: 1px solid #33281f;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+        }
+
+        .book-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.6);
+            border-color: #b88e40;
+        }
+
+        .book-spine::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 8px;
+            background: linear-gradient(to right, rgba(0,0,0,0.5), transparent);
+            z-index: 10;
+        }
+
+        ::-webkit-scrollbar {
+            width: 7px;
+            height: 7px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #120e0b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2e241b;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #b88e40;
+        }
+
+        .glass-panel {
+            background: #17120d;
+            border-bottom: 1px solid #2e241b;
+        }
+
+        @keyframes subtlePulse {
+            0%, 100% { opacity: 0.4; transform: scale(0.98); }
+            50% { opacity: 1; transform: scale(1.02); }
+        }
+
+        .bppk-pulse-logo {
+            animation: subtlePulse 2s infinite ease-in-out;
+        }
+
+        .manhwa-canvas {
+            display: block;
+            margin: 0 auto 8px auto;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.7);
+            max-width: 100%;
+            height: auto;
+            background-color: #ffffff;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between antialiased selection:bg-academia-gold selection:text-academia-950">
+
+    <!-- Initial Splash Screen Overlay -->
+    <div id="splashScreen" class="fixed inset-0 z-50 bg-[#120e0b] flex flex-col items-center justify-center transition-opacity duration-500">
+        <div class="flex flex-col items-center gap-3 bppk-pulse-logo">
+            <div id="splashLogoContainer" class="w-16 h-16 rounded-xl bg-academia-850 border border-academia-gold/40 flex items-center justify-center text-academia-gold shadow-lg overflow-hidden p-2">
+                <i data-lucide="book-open" class="w-8 h-8 default-logo-icon"></i>
+            </div>
+            <div class="text-center">
+                <h1 class="font-serif text-2xl font-bold tracking-wide text-academia-gold">BPPK-Lib</h1>
+                <p class="text-xs text-academia-muted font-serif italic mt-0.5">Perpustakaan Digital SMPK BPPK Bandung</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- App Header / Navigation -->
+    <header class="sticky top-0 z-40 glass-panel px-4 lg:px-8 py-3">
+        <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
+            <!-- Brand Logo -->
+            <div class="flex items-center gap-3">
+                <div id="headerLogoContainer" class="w-9 h-9 rounded-lg bg-academia-850 border border-academia-gold/40 flex items-center justify-center text-academia-gold overflow-hidden p-1">
+                    <i data-lucide="book-open" class="w-4 h-4 default-logo-icon"></i>
+                </div>
+                <div>
+                    <h1 class="font-serif text-lg md:text-xl font-bold tracking-tight text-academia-gold flex items-center gap-2">
+                        BPPK-Lib
+                        <span class="text-[10px] font-sans font-normal px-2 py-0.5 rounded bg-academia-800 text-academia-parchment border border-academia-700">SMPK BPPK</span>
+                    </h1>
+                </div>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="flex-1 max-w-md mx-2 hidden md:block">
+                <div class="relative">
+                    <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-academia-muted"></i>
+                    <input type="text" id="searchInput" placeholder="Cari buku, komik, atau penulis..." 
+                        class="w-full pl-9 pr-4 py-1.5 bg-[#0e0b08] border border-academia-700 rounded-lg text-xs text-academia-parchment placeholder-academia-muted focus:outline-none focus:border-academia-gold transition-colors">
+                </div>
+            </div>
+
+            <!-- Action Controls -->
+            <div class="flex items-center gap-2">
+                <button id="openLogoModalBtn" class="hidden items-center gap-1.5 px-3 py-1.5 rounded-lg border border-academia-gold/40 bg-academia-850 hover:bg-academia-800 text-academia-gold text-xs font-medium transition-all">
+                    <i data-lucide="image" class="w-3.5 h-3.5"></i>
+                    <span class="hidden md:inline">Ganti Logo</span>
+                </button>
+
+                <button id="roleToggleBtn" title="Masuk Mode Petugas Perpustakaan" class="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-academia-700 bg-academia-850 text-xs font-medium text-academia-parchment hover:border-academia-gold/50 transition-all">
+                    <span id="roleIndicatorDot" class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <span id="roleText">Mode: Siswa</span>
+                    <i data-lucide="lock" id="roleLockIcon" class="w-3.5 h-3.5 text-academia-gold"></i>
+                </button>
+
+                <button id="openUploadModalBtn" class="flex items-center gap-1.5 px-3.5 py-1.5 bg-academia-gold hover:bg-academia-gold-hover text-academia-950 font-bold rounded-lg text-xs transition-all shadow-sm">
+                    <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                    <span class="hidden sm:inline">Unggah Buku</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile Search Bar -->
+        <div class="mt-2.5 md:hidden">
+            <div class="relative">
+                <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-academia-muted"></i>
+                <input type="text" id="mobileSearchInput" placeholder="Cari buku, komik, atau penulis..." 
+                    class="w-full pl-9 pr-4 py-1.5 bg-[#0e0b08] border border-academia-700 rounded-lg text-xs text-academia-parchment placeholder-academia-muted focus:outline-none focus:border-academia-gold">
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-4 lg:px-8 py-6 flex-1 w-full">
+        <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6 pb-4 border-b border-academia-700/60">
+            <div>
+                <h2 class="font-serif text-2xl md:text-3xl font-bold text-academia-parchment tracking-tight">Katalog Literatur & Manhwa</h2>
+                <p class="text-xs text-academia-muted mt-1">Perpustakaan Digital SMPK BPPK Bandung dengan Cloud Real-Time Sync.</p>
+            </div>
+
+            <div class="flex items-center gap-2 self-start md:self-auto">
+                <span id="pendingAdminCountBadge" class="hidden text-xs text-amber-400 font-medium px-2.5 py-1 rounded bg-amber-950/40 border border-amber-800/40 items-center gap-1.5 mr-2">
+                    <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+                    <span id="pendingCountText">0 Menunggu</span>
+                </span>
+                <button id="viewApprovedBtn" class="px-3 py-1 rounded bg-academia-700 text-academia-parchment text-xs font-medium border border-academia-600">
+                    Katalog Publik
+                </button>
+                <button id="viewPendingBtn" class="px-3 py-1 rounded bg-academia-950 text-academia-muted text-xs font-medium border border-academia-700 hover:text-academia-parchment">
+                    Menunggu Approval
+                </button>
+            </div>
+        </div>
+
+        <!-- Category Pills -->
+        <div class="flex items-center gap-2 overflow-x-auto pb-4 mb-6 scrollbar-none" id="categoryContainer">
+            <button data-category="all" class="category-btn active px-4 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all bg-academia-gold text-academia-950">
+                Semua Buku
+            </button>
+            <button data-category="Manhwa/Komik" class="category-btn px-4 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all bg-academia-850 text-academia-muted hover:text-academia-parchment border border-academia-700">
+                Manhwa & Komik
+            </button>
+            <button data-category="Pelajaran" class="category-btn px-4 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all bg-academia-850 text-academia-muted hover:text-academia-parchment border border-academia-700">
+                Buku Pelajaran
+            </button>
+            <button data-category="Fiksi" class="category-btn px-4 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all bg-academia-850 text-academia-muted hover:text-academia-parchment border border-academia-700">
+                Novel & Fiksi
+            </button>
+            <button data-category="Ensiklopedia" class="category-btn px-4 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all bg-academia-850 text-academia-muted hover:text-academia-parchment border border-academia-700">
+                Ensiklopedia
+            </button>
+        </div>
+
+        <!-- Books Grid Container -->
+        <section class="min-h-[350px]">
+            <div id="loadingSkeleton" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-5"></div>
+
+            <div id="emptyState" class="hidden flex-col items-center justify-center text-center py-16 px-4 border border-dashed border-academia-700/60 rounded-xl bg-academia-900/20">
+                <div class="w-12 h-12 rounded-full bg-academia-850 flex items-center justify-center text-academia-muted mb-3 border border-academia-700">
+                    <i data-lucide="book-open" class="w-6 h-6"></i>
+                </div>
+                <h3 class="font-serif text-base font-bold text-academia-parchment mb-1">Belum Ada Buku Dalam Kategori Ini</h3>
+                <p class="text-xs text-academia-muted max-w-xs mb-4">Silakan unggah link Google Drive atau berkas buku.</p>
+                <button id="emptyUploadTrigger" class="px-4 py-2 bg-academia-gold text-academia-950 rounded-lg text-xs font-bold hover:bg-academia-gold-hover transition-colors">
+                    Unggah Buku Sekarang
+                </button>
+            </div>
+
+            <div id="booksGrid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-5"></div>
+        </section>
+    </main>
+
+    <!-- Modal: Admin PIN Authorization -->
+    <div id="pinModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-[#1b1510] border border-academia-gold/40 rounded-xl shadow-2xl max-w-xs w-full overflow-hidden transform scale-95 transition-transform duration-300" id="pinModalContent">
+            <div class="px-4 py-3 border-b border-academia-700 bg-[#14100c] flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="shield-lock" class="w-4 h-4 text-academia-gold"></i>
+                    <h3 class="font-serif text-xs font-bold text-academia-parchment">Verifikasi Petugas</h3>
+                </div>
+                <button id="closePinModalBtn" type="button" class="text-academia-muted hover:text-academia-parchment">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+            <form id="pinAuthForm" class="p-4 space-y-3 text-center">
+                <p class="text-xs text-academia-muted">
+                    Masukkan PIN Petugas Perpustakaan untuk mengaktifkan mode moderasi & pengelola.
+                </p>
+                <div>
+                    <input type="password" id="adminPinInput" maxlength="6" placeholder="Masukkan PIN" required
+                        class="w-full text-center tracking-widest font-mono font-bold text-base px-3 py-2 bg-[#0e0b08] border border-academia-700 rounded-lg text-academia-gold focus:outline-none focus:border-academia-gold">
+                </div>
+                <button type="submit" class="w-full py-2 bg-academia-gold hover:bg-academia-gold-hover text-academia-950 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow">
+                    <i data-lucide="key" class="w-3.5 h-3.5"></i>
+                    <span>Verifikasi PIN</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Upload School Logo (Admin Only) -->
+    <div id="logoModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-[#1b1510] border border-academia-gold/40 rounded-xl shadow-2xl max-w-sm w-full overflow-hidden transform scale-95 transition-transform duration-300" id="logoModalContent">
+            <div class="px-4 py-3 border-b border-academia-700 bg-[#14100c] flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="image" class="w-4 h-4 text-academia-gold"></i>
+                    <h3 class="font-serif text-xs font-bold text-academia-parchment">Pengaturan Logo Sekolah</h3>
+                </div>
+                <button id="closeLogoModalBtn" type="button" class="text-academia-muted hover:text-academia-parchment">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+            <form id="logoUploadForm" class="p-4 space-y-3 text-xs">
+                <div class="flex flex-col items-center justify-center p-3 bg-[#0e0b08] border border-academia-700 rounded-lg">
+                    <div id="logoPreviewBox" class="w-16 h-16 rounded-lg bg-academia-850 border border-academia-gold/40 flex items-center justify-center overflow-hidden mb-1">
+                        <i data-lucide="book-open" class="w-6 h-6 text-academia-gold default-logo-icon"></i>
+                    </div>
+                    <span class="text-[10px] text-academia-muted">Pratinjau Logo</span>
+                </div>
+
+                <div>
+                    <label class="block text-academia-muted font-medium mb-1">Upload Berkas Gambar Logo</label>
+                    <input type="file" id="logoFileInput" accept="image/*"
+                        class="w-full px-2.5 py-1.5 bg-[#0e0b08] border border-academia-700 rounded-lg text-academia-parchment focus:outline-none focus:border-academia-gold file:mr-2 file:py-0.5 file:px-2 file:rounded file:border-0 file:text-[10px] file:bg-academia-700 file:text-academia-parchment">
+                </div>
+
+                <div class="relative flex py-1 items-center">
+                    <div class="flex-grow border-t border-academia-700"></div>
+                    <span class="flex-shrink mx-2 text-[10px] text-academia-muted">atau link url</span>
+                    <div class="flex-grow border-t border-academia-700"></div>
+                </div>
+
+                <div>
+                    <input type="url" id="logoUrlInput" placeholder="https://..."
+                        class="w-full px-3 py-1.5 bg-[#0e0b08] border border-academia-700 rounded-lg text-academia-parchment focus:outline-none focus:border-academia-gold">
+                </div>
+
+                <div class="pt-2 flex justify-end gap-2 border-t border-academia-700">
+                    <button type="button" id="resetLogoBtn" class="px-3 py-1.5 bg-rose-950 hover:bg-rose-900 text-rose-200 border border-rose-800 rounded-lg text-xs font-semibold">
+                        Reset Default
+                    </button>
+                    <button type="submit" id="saveLogoBtn" class="px-4 py-1.5 bg-academia-gold hover:bg-academia-gold-hover text-academia-950 rounded-lg text-xs font-bold flex items-center gap-1">
+                        <i data-lucide="save" class="w-3.5 h-3.5"></i>
+                        <span>Simpan Logo</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Upload Book / PDF / Cover -->
+    <div id="uploadModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-[#1b1510] border border-academia-gold/30 rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden transform scale-95 transition-transform duration-300" id="uploadModalContent">
+            
+            <div class="px-5 py-3 border-b border-academia-700 flex items-center justify-between bg-[#14100c]">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="file-plus" class="w-4 h-4 text-academia-gold"></i>
+                    <h3 class="font-serif text-sm font-bold text-academia-parchment">Unggah Berkas / Komik Baru</h3>
+                </div>
+                <button id="closeUploadModalBtn" type="button" class="text-academia-muted hover:text-academia-parchment p-1 rounded-lg">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <form id="uploadBookForm" class="p-5 overflow-y-auto space-y-4 text-xs">
+                <div class="p-3 bg-[#0e0b08] border border-academia-700 rounded-lg space-y-2">
+                    <label class="block text-academia-parchment font-semibold mb-1">Sumber Dokumen *</label>
+                    <div class="flex items-center gap-4">
+                        <label class="flex items-center gap-2 text-xs text-academia-parchment cursor-pointer">
+                            <input type="radio" name="sourceType" value="link" checked class="accent-academia-gold">
+                            <span>Link Google Drive</span>
+                        </label>
+                        <label class="flex items-center gap-2 text-xs text-academia-parchment cursor-pointer">
+                            <input type="radio" name="sourceType" value="file" class="accent-academia-gold">
+                            <span>Upload File PDF Langsung</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div id="driveUrlInputContainer">
+                    <label class="block text-academia-muted font-medium mb-1" for="bookDriveUrl">Link Google Drive / URL PDF *</label>
+                    <input type="url" id="bookDriveUrl" placeholder="https://drive.google.com/file/d/.../view"
+                        class="w-full px-3 py-2 bg-[#0e0b08] border border-academia-700 rounded-lg text-academia-parchment focus:outline-none focus:border-academia-gold">
+                </div>
+
+                <div id="pdfFileInputContainer" class="hidden">
+                    <label class="block text-academia-muted font-medium mb-1" for="pdfFileInput">Pilih File PDF (Max 150MB) *</label>
+                    <input type="file" id="pdfFileInput" accept="application/pdf"
+                        class="w-full px-3 py-2 bg-[#0e0b08] border border-academia-700 rounded-lg text-academia-parchment focus:outline-none focus:border-academia-gold file:mr-3 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-academia-700 file:text-academia-parchment">
+                </div>
+
+                <div>
+                    <label class="block text-academia-muted font-medium mb-1" for="bookTitle">Judul Buku / Manhwa *</label>
+                    <input type="text" id="bookTitle" required placeholder="Contoh: Atomic Habits / Solo Leveling Ch.1"
+                        class="w-full px-3 py-2 bg-[#0e0b08] border border-academia-700 rounded-lg text-academia-parchment focus:outline-none focus:border-academia-gold">
+                </div>
+
+                <div>
+                    <label class="block text-academia-muted font-medium mb-1" for="bookAuthor">Penulis / Pengunggah *</label>
+                    <input type="text" id="bookAuthor" required placeholder="Nama Siswa / Guru / Penulis"
+                        class="w-full px-3 py-2 bg-[#0e0b08] border border-academia-700 rounded-lg text-academia-parchment focus:outline-none focus:border-academia-gold">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-academia-muted font-medium mb-1" for="bookCategory">Kategori *</label>
+                        <select id="bookCategory" required class="w-full px-3 py-2 bg-[#0e0b08] border border-academia-700 rounded-lg text-academia-parchment focus:outline-none focus:border-academia-gold">
+                            <option value="Manhwa/Komik">Manhwa & Komik</option>
+                            <option value="Pelajaran">Buku Pelajaran</option>
+                            <option value="Fiksi">Novel & Fiksi</option>
+                            <option value="Ensiklopedia">Ensiklopedia</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-academia-muted font-medium mb-1" for="bookReadMode">Format Baca *</label>
+                        <select id="bookReadMode" required class="w-full px-3 py-2 bg-[#0e0b08] border border-academia-700 rounded-lg text-academia-parchment focus:outline-none focus:border-academia-gold">
+                            <option value="webtoon">Manhwa Mode (Scroll Vertikal)</option>
+                            <option value="pdf">Preview Standar</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-academia-muted font-medium mb-1">Sampul Buku (Opsional)</label>
+                    <div class="space-y-2">
+                        <input type="file" id="coverFileInput" accept="image/*"
+                            class="w-full px-3 py-1.5 bg-[#0e0b08] border border-academia-700 rounded-lg text-academia-parchment focus:outline-none focus:border-academia-gold file:mr-2 file:py-0.5 file:px-2 file:rounded file:border-0 file:text-[10px] file:bg-academia-700 file:text-academia-parchment">
+                        <input type="url" id="bookCoverUrl" placeholder="Atau tempel URL gambar sampul (https://...)"
+                            class="w-full px-3 py-1.5 bg-[#0e0b08] border border-academia-700 rounded-lg text-academia-parchment focus:outline-none focus:border-academia-gold text-xs">
+                    </div>
+                </div>
+
+                <div class="pt-3 flex justify-end gap-2 border-t border-academia-700">
+                    <button type="button" id="cancelUploadBtn" class="px-4 py-2 bg-academia-800 hover:bg-academia-700 text-academia-parchment rounded-lg text-xs font-semibold">
+                        Batal
+                    </button>
+                    <button type="submit" id="submitBookBtn" class="px-5 py-2 bg-academia-gold hover:bg-academia-gold-hover text-academia-950 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow">
+                        <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+                        <span>Simpan Buku</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Reader Modal -->
+    <div id="readerModal" class="fixed inset-0 z-50 bg-[#0d0a07] hidden flex-col transition-opacity">
+        <div class="px-4 py-2.5 bg-[#14100c] border-b border-academia-700 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3 overflow-hidden">
+                <button id="closeReaderBtn" class="p-1.5 rounded-lg text-academia-muted hover:text-academia-parchment hover:bg-academia-800 transition-colors">
+                    <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                </button>
+                <div class="truncate">
+                    <h3 id="readerTitle" class="font-serif text-sm font-bold text-academia-gold truncate">Judul Buku</h3>
+                    <p id="readerAuthor" class="text-[11px] text-academia-muted truncate">Penulis</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <div id="zoomControls" class="flex items-center bg-academia-850 rounded-lg border border-academia-700 px-2 py-1 gap-2">
+                    <button id="zoomOutBtn" class="text-academia-muted hover:text-academia-parchment p-0.5" title="Zoom Out">
+                        <i data-lucide="minus" class="w-3.5 h-3.5"></i>
+                    </button>
+                    <span id="zoomLevelText" class="text-[11px] text-academia-parchment font-mono">100%</span>
+                    <button id="zoomInBtn" class="text-academia-muted hover:text-academia-parchment p-0.5" title="Zoom In">
+                        <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+                <a id="readerExternalLink" href="#" target="_blank" rel="noopener noreferrer" class="hidden sm:flex px-3 py-1 bg-academia-800 hover:bg-academia-700 text-academia-parchment text-xs font-medium rounded-lg items-center gap-1.5 border border-academia-700">
+                    <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                    <span>Buka Sumber</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="flex-1 w-full h-full relative overflow-y-auto overflow-x-auto p-2 sm:p-4 bg-[#090705] flex flex-col items-center" id="readerViewport">
+            <div id="readerLoading" class="flex flex-col items-center gap-3 text-academia-gold my-auto py-12">
+                <div class="w-12 h-12 rounded-xl bg-academia-850 border border-academia-gold/40 flex items-center justify-center text-academia-gold bppk-pulse-logo shadow-lg">
+                    <i data-lucide="book-open" class="w-6 h-6"></i>
+                </div>
+                <p class="text-xs text-academia-parchment font-medium">Memuat Halaman Manhwa / Dokumen PDF...</p>
+            </div>
+
+            <div id="manhwaPagesContainer" class="w-full flex flex-col items-center space-y-2 max-w-2xl"></div>
+            <iframe id="readerIframe" class="w-full h-full border-0 hidden min-h-[80vh]" allow="autoplay"></iframe>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Footer -->
+    <footer class="border-t border-academia-700/50 bg-[#0d0a07] py-4 px-4 text-center text-xs text-academia-muted mt-8">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+                <i data-lucide="book-marked" class="w-4 h-4 text-academia-gold"></i>
+                <span class="font-medium text-academia-parchment">Perpustakaan Digital SMPK BPPK Bandung</span>
+            </div>
+            <p>© 2026 SMPK BPPK. Real-Time Cloud Digital Library.</p>
+        </div>
+    </footer>
+
+    <!-- Firebase & Logic Script -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, 
+            signInAnonymously, 
+            onAuthStateChanged 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            collection, 
+            doc, 
+            addDoc, 
+            setDoc, 
+            updateDoc, 
+            deleteDoc, 
+            onSnapshot, 
+            serverTimestamp 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Firebase Config perpus-digital-bppk
+        const firebaseConfig = {
+            apiKey: "AIzaSyCRvRoRRHuoL7KsTeKihQjNbl6SHzMIorg",
+            authDomain: "perpus-digital-bppk.firebaseapp.com",
+            projectId: "perpus-digital-bppk",
+            storageBucket: "perpus-digital-bppk.firebasestorage.app",
+            messagingSenderId: "1014973453099",
+            appId: "1:1014973453099:web:10f0ed7878193bd269ab6e",
+            measurementId: "G-7JZ813L1YQ"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        window.db = db;
+
+        const state = {
+            user: null,
+            isAdmin: false,
+            adminPinCode: '14391',
+            schoolLogoUrl: '',
+            books: [],
+            activeCategory: 'all',
+            searchQuery: '',
+            filterApprovedOnly: true,
+            currentScale: 1.0,
+            activePdfDoc: null
+        };
+
+        const elements = {
+            roleToggleBtn: document.getElementById('roleToggleBtn'),
+            roleText: document.getElementById('roleText'),
+            roleIndicatorDot: document.getElementById('roleIndicatorDot'),
+            roleLockIcon: document.getElementById('roleLockIcon'),
+            openLogoModalBtn: document.getElementById('openLogoModalBtn'),
+            logoModal: document.getElementById('logoModal'),
+            logoModalContent: document.getElementById('logoModalContent'),
+            closeLogoModalBtn: document.getElementById('closeLogoModalBtn'),
+            logoUploadForm: document.getElementById('logoUploadForm'),
+            logoFileInput: document.getElementById('logoFileInput'),
+            logoUrlInput: document.getElementById('logoUrlInput'),
+            logoPreviewBox: document.getElementById('logoPreviewBox'),
+            saveLogoBtn: document.getElementById('saveLogoBtn'),
+            resetLogoBtn: document.getElementById('resetLogoBtn'),
+            headerLogoContainer: document.getElementById('headerLogoContainer'),
+            splashLogoContainer: document.getElementById('splashLogoContainer'),
+            pinModal: document.getElementById('pinModal'),
+            pinModalContent: document.getElementById('pinModalContent'),
+            closePinModalBtn: document.getElementById('closePinModalBtn'),
+            pinAuthForm: document.getElementById('pinAuthForm'),
+            adminPinInput: document.getElementById('adminPinInput'),
+            booksGrid: document.getElementById('booksGrid'),
+            loadingSkeleton: document.getElementById('loadingSkeleton'),
+            emptyState: document.getElementById('emptyState'),
+            searchInput: document.getElementById('searchInput'),
+            mobileSearchInput: document.getElementById('mobileSearchInput'),
+            uploadModal: document.getElementById('uploadModal'),
+            uploadModalContent: document.getElementById('uploadModalContent'),
+            openUploadModalBtn: document.getElementById('openUploadModalBtn'),
+            closeUploadModalBtn: document.getElementById('closeUploadModalBtn'),
+            cancelUploadBtn: document.getElementById('cancelUploadBtn'),
+            uploadBookForm: document.getElementById('uploadBookForm'),
+            submitBookBtn: document.getElementById('submitBookBtn'),
+            pdfFileInput: document.getElementById('pdfFileInput'),
+            coverFileInput: document.getElementById('coverFileInput'),
+            pdfFileInputContainer: document.getElementById('pdfFileInputContainer'),
+            driveUrlInputContainer: document.getElementById('driveUrlInputContainer'),
+            readerModal: document.getElementById('readerModal'),
+            closeReaderBtn: document.getElementById('closeReaderBtn'),
+            readerIframe: document.getElementById('readerIframe'),
+            readerLoading: document.getElementById('readerLoading'),
+            readerTitle: document.getElementById('readerTitle'),
+            readerAuthor: document.getElementById('readerAuthor'),
+            readerExternalLink: document.getElementById('readerExternalLink'),
+            manhwaPagesContainer: document.getElementById('manhwaPagesContainer'),
+            zoomInBtn: document.getElementById('zoomInBtn'),
+            zoomOutBtn: document.getElementById('zoomOutBtn'),
+            zoomLevelText: document.getElementById('zoomLevelText'),
+            categoryContainer: document.getElementById('categoryContainer'),
+            viewApprovedBtn: document.getElementById('viewApprovedBtn'),
+            viewPendingBtn: document.getElementById('viewPendingBtn'),
+            pendingAdminCountBadge: document.getElementById('pendingAdminCountBadge'),
+            pendingCountText: document.getElementById('pendingCountText'),
+            emptyUploadTrigger: document.getElementById('emptyUploadTrigger')
+        };
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const bgClass = type === 'success' ? 'bg-emerald-950 border-emerald-700 text-emerald-200' :
+                            type === 'error' ? 'bg-rose-950 border-rose-700 text-rose-200' :
+                            'bg-academia-850 border-academia-gold text-academia-parchment';
+
+            toast.className = `px-4 py-2.5 rounded-lg border shadow-lg text-xs font-medium flex items-center gap-2 transform transition-all duration-300 translate-y-4 opacity-0 pointer-events-auto max-w-sm ${bgClass}`;
+            const iconName = type === 'success' ? 'check-circle' : type === 'error' ? 'alert-circle' : 'info';
+            toast.innerHTML = `<i data-lucide="${iconName}" class="w-4 h-4 flex-shrink-0"></i> <span>${message}</span>`;
+            container.appendChild(toast);
+            lucide.createIcons();
+
+            setTimeout(() => toast.classList.remove('translate-y-4', 'opacity-0'), 10);
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        function fileToDataUrl(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = (err) => reject(err);
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function transformDriveUrl(url) {
+            if (!url) return '';
+            const driveIdMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
+            if (driveIdMatch && driveIdMatch[1]) {
+                return `https://drive.google.com/file/d/${driveIdMatch[1]}/preview`;
+            }
+            return url;
+        }
+
+        async function initAuthAndStore() {
+            renderSkeleton(true);
+            try {
+                await signInAnonymously(auth);
+            } catch (err) {
+                console.warn("Auth initial fallback:", err);
+            }
+
+            onAuthStateChanged(auth, (user) => {
+                if (user) state.user = user;
+                setupRealtimeBooksListener();
+                setupRealtimeLogoListener();
+            });
+        }
+
+        function setupRealtimeLogoListener() {
+            const logoDocRef = doc(db, 'settings', 'school_logo');
+            onSnapshot(logoDocRef, (docSnap) => {
+                if (docSnap.exists() && docSnap.data().url) {
+                    state.schoolLogoUrl = docSnap.data().url;
+                    applySchoolLogo(state.schoolLogoUrl);
+                }
+            });
+        }
+
+        function applySchoolLogo(url) {
+            const logoContainers = [elements.headerLogoContainer, elements.splashLogoContainer, elements.logoPreviewBox];
+            logoContainers.forEach(container => {
+                if (!container) return;
+                if (url && url.trim() !== '') {
+                    container.innerHTML = `<img src="${url}" alt="Logo Sekolah SMPK BPPK" class="w-full h-full object-contain">`;
+                } else {
+                    container.innerHTML = `<i data-lucide="book-open" class="w-4 h-4 default-logo-icon"></i>`;
+                }
+            });
+            lucide.createIcons();
+        }
+
+        // Main Firestore Listener - Guarantees Real-Time Syncing Across All Devices
+        function setupRealtimeBooksListener() {
+            const booksCollectionRef = collection(db, 'books');
+            onSnapshot(booksCollectionRef, 
+                (snapshot) => {
+                    const fetchedBooks = [];
+                    snapshot.forEach((docSnap) => {
+                        fetchedBooks.push({ id: docSnap.id, ...docSnap.data() });
+                    });
+                    
+                    fetchedBooks.sort((a, b) => {
+                        const timeA = a.createdAt?.seconds || 0;
+                        const timeB = b.createdAt?.seconds || 0;
+                        return timeB - timeA;
+                    });
+
+                    state.books = fetchedBooks;
+                    renderSkeleton(false);
+                    renderCatalog();
+                    updatePendingBadge();
+                },
+                (error) => {
+                    console.error("Firestore Listener error:", error);
+                    renderSkeleton(false);
+                    renderCatalog();
+                }
+            );
+        }
+
+        function renderSkeleton(show) {
+            if (!show) {
+                elements.loadingSkeleton.classList.add('hidden');
+                return;
+            }
+            elements.loadingSkeleton.classList.remove('hidden');
+            elements.loadingSkeleton.innerHTML = Array(5).fill(0).map(() => `
+                <div class="book-card rounded-xl overflow-hidden flex flex-col justify-between h-72 p-3">
+                    <div class="w-full h-44 rounded bg-academia-800/40 bppk-pulse-logo mb-2"></div>
+                    <div class="h-3 bg-academia-800/60 rounded w-3/4 mb-1 bppk-pulse-logo"></div>
+                    <div class="h-2 bg-academia-800/30 rounded w-1/2 bppk-pulse-logo"></div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function updatePendingBadge() {
+            const pendingCount = state.books.filter(b => b.status === 'pending').length;
+            if (pendingCount > 0 && state.isAdmin) {
+                elements.pendingAdminCountBadge.classList.remove('hidden');
+                elements.pendingAdminCountBadge.classList.add('inline-flex');
+                elements.pendingCountText.innerText = `${pendingCount} Menunggu Approval`;
+            } else {
+                elements.pendingAdminCountBadge.classList.add('hidden');
+                elements.pendingAdminCountBadge.classList.remove('inline-flex');
+            }
+        }
+
+        function togglePinModal(show) {
+            if (show) {
+                elements.adminPinInput.value = '';
+                elements.pinModal.classList.remove('opacity-0', 'pointer-events-none');
+                elements.pinModalContent.classList.remove('scale-95');
+                elements.pinModalContent.classList.add('scale-100');
+                elements.adminPinInput.focus();
+            } else {
+                elements.pinModal.classList.add('opacity-0', 'pointer-events-none');
+                elements.pinModalContent.classList.remove('scale-100');
+                elements.pinModalContent.classList.add('scale-95');
+            }
+        }
+
+        function toggleLogoModal(show) {
+            if (show) {
+                elements.logoUrlInput.value = state.schoolLogoUrl || '';
+                elements.logoFileInput.value = '';
+                elements.logoModal.classList.remove('opacity-0', 'pointer-events-none');
+                elements.logoModalContent.classList.remove('scale-95');
+                elements.logoModalContent.classList.add('scale-100');
+            } else {
+                elements.logoModal.classList.add('opacity-0', 'pointer-events-none');
+                elements.logoModalContent.classList.remove('scale-100');
+                elements.logoModalContent.classList.add('scale-95');
+            }
+        }
+
+        function handleRoleToggleClick() {
+            if (state.isAdmin) {
+                state.isAdmin = false;
+                elements.roleText.innerText = "Mode: Siswa";
+                elements.roleToggleBtn.classList.remove('border-academia-gold', 'bg-academia-gold/10');
+                elements.roleIndicatorDot.className = "w-2 h-2 rounded-full bg-emerald-500";
+                elements.roleLockIcon.setAttribute('data-lucide', 'lock');
+                elements.openLogoModalBtn.classList.add('hidden');
+                elements.openLogoModalBtn.classList.remove('flex');
+                state.filterApprovedOnly = true;
+                elements.viewApprovedBtn.className = "px-3 py-1 rounded bg-academia-700 text-academia-parchment text-xs font-medium border border-academia-600";
+                elements.viewPendingBtn.className = "px-3 py-1 rounded bg-academia-950 text-academia-muted text-xs font-medium border border-academia-700 hover:text-academia-parchment";
+                showToast("Kembali ke Mode Siswa.", "info");
+                updatePendingBadge();
+                renderCatalog();
+            } else {
+                togglePinModal(true);
+            }
+            lucide.createIcons();
+        }
+
+        function handlePinVerification(e) {
+            e.preventDefault();
+            const inputPin = elements.adminPinInput.value.trim();
+
+            if (inputPin === state.adminPinCode) {
+                state.isAdmin = true;
+                elements.roleText.innerText = "Mode: Petugas";
+                elements.roleToggleBtn.classList.add('border-academia-gold', 'bg-academia-gold/10');
+                elements.roleIndicatorDot.className = "w-2 h-2 rounded-full bg-academia-gold animate-pulse";
+                elements.roleLockIcon.setAttribute('data-lucide', 'unlock');
+                elements.openLogoModalBtn.classList.remove('hidden');
+                elements.openLogoModalBtn.classList.add('flex');
+                togglePinModal(false);
+                showToast("Akses Petugas Berhasil!", "success");
+                updatePendingBadge();
+                renderCatalog();
+            } else {
+                showToast("PIN Salah!", "error");
+                elements.adminPinInput.value = '';
+                elements.adminPinInput.focus();
+            }
+            lucide.createIcons();
+        }
+
+        async function handleLogoUpload(e) {
+            e.preventDefault();
+            if (!state.isAdmin) return;
+
+            let logoUrl = elements.logoUrlInput.value.trim();
+            const logoFile = elements.logoFileInput.files[0];
+
+            if (logoFile) {
+                try {
+                    logoUrl = await fileToDataUrl(logoFile);
+                } catch (err) {
+                    showToast("Gagal memproses gambar logo", "error");
+                    return;
+                }
+            }
+
+            if (!logoUrl) {
+                showToast("Pilih berkas gambar atau isi URL logo!", "error");
+                return;
+            }
+
+            try {
+                const logoDocRef = doc(db, 'settings', 'school_logo');
+                await setDoc(logoDocRef, { url: logoUrl, updatedAt: serverTimestamp() });
+                showToast("Logo sekolah berhasil tersinkronisasi!", "success");
+                toggleLogoModal(false);
+            } catch (err) {
+                showToast("Gagal menyimpan logo ke cloud: " + err.message, "error");
+            }
+        }
+
+        async function handleResetLogo() {
+            if (!state.isAdmin) return;
+            try {
+                const logoDocRef = doc(db, 'settings', 'school_logo');
+                await deleteDoc(logoDocRef);
+                applySchoolLogo('');
+                showToast("Logo dikembalikan ke standar", "info");
+                toggleLogoModal(false);
+            } catch (err) {
+                showToast("Gagal menghapus logo", "error");
+            }
+        }
+
+        function renderCatalog() {
+            let filtered = state.books.filter(book => {
+                const matchesStatus = state.filterApprovedOnly 
+                    ? (book.status === 'approved' || !book.status) 
+                    : book.status === 'pending';
+
+                const matchesCategory = state.activeCategory === 'all' || book.category === state.activeCategory;
+                const q = state.searchQuery.toLowerCase().trim();
+                const matchesSearch = !q || 
+                    (book.title && book.title.toLowerCase().includes(q)) ||
+                    (book.author && book.author.toLowerCase().includes(q));
+
+                return matchesStatus && matchesCategory && matchesSearch;
+            });
+
+            elements.booksGrid.innerHTML = '';
+
+            if (filtered.length === 0) {
+                elements.emptyState.classList.remove('hidden');
+                elements.emptyState.classList.add('flex');
+                return;
+            } else {
+                elements.emptyState.classList.add('hidden');
+                elements.emptyState.classList.remove('flex');
+            }
+
+            filtered.forEach(book => {
+                const card = document.createElement('div');
+                card.className = "book-card rounded-xl overflow-hidden flex flex-col justify-between group";
+                
+                const coverUrl = book.coverUrl && book.coverUrl.trim() !== '' 
+                    ? book.coverUrl 
+                    : `https://placehold.co/400x600/1e1711/c9a050?text=${encodeURIComponent(book.title || 'BPPK Book')}`;
+
+                const isPending = book.status === 'pending';
+
+                card.innerHTML = `
+                    <div>
+                        <div class="book-spine relative w-full h-52 sm:h-60 overflow-hidden bg-[#0c0907]">
+                            <img src="${coverUrl}" alt="${book.title}" 
+                                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                loading="lazy"
+                                onerror="this.onerror=null; this.src='https://placehold.co/400x600/1e1711/c9a050?text=BPPK+Book';">
+                            
+                            <div class="absolute top-2 left-2">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-[#120e0b]/90 text-academia-gold border border-academia-gold/30">
+                                    ${book.category || 'Umum'}
+                                </span>
+                            </div>
+
+                            ${isPending ? `
+                                <div class="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-950 text-amber-200 border border-amber-700">
+                                    Pending
+                                </div>
+                            ` : ''}
+                        </div>
+
+                        <div class="p-3">
+                            <h4 class="font-serif font-bold text-sm text-academia-parchment line-clamp-1 group-hover:text-academia-gold transition-colors">
+                                ${book.title}
+                            </h4>
+                            <p class="text-[11px] text-academia-muted truncate mt-0.5">
+                                ${book.author || 'Anonim'}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="p-3 pt-0 space-y-2">
+                        <button class="read-btn w-full py-1.5 bg-[#261d15] hover:bg-academia-gold hover:text-academia-950 text-academia-parchment border border-academia-700 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 active:scale-95" 
+                            data-id="${book.id}">
+                            <i data-lucide="book-open" class="w-3.5 h-3.5"></i>
+                            <span>Baca</span>
+                        </button>
+
+                        ${state.isAdmin ? `
+                            <div class="flex items-center gap-1 pt-1.5 border-t border-academia-700/50">
+                                ${isPending ? `
+                                    <button class="approve-btn flex-1 py-1 bg-emerald-950 hover:bg-emerald-900 text-emerald-200 text-[10px] font-semibold rounded border border-emerald-800 flex items-center justify-center gap-1" data-id="${book.id}">
+                                        <i data-lucide="check" class="w-3 h-3"></i> Setujui
+                                    </button>
+                                ` : ''}
+                                <button class="delete-btn flex-1 py-1 bg-rose-950 hover:bg-rose-900 text-rose-200 text-[10px] font-semibold rounded border border-rose-800 flex items-center justify-center gap-1" data-id="${book.id}">
+                                    <i data-lucide="trash-2" class="w-3 h-3"></i> Hapus
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+
+                card.querySelector('.read-btn').addEventListener('click', () => openReader(book));
+
+                if (state.isAdmin) {
+                    const approveBtn = card.querySelector('.approve-btn');
+                    if (approveBtn) approveBtn.addEventListener('click', (e) => { e.stopPropagation(); approveBook(book.id); });
+                    const deleteBtn = card.querySelector('.delete-btn');
+                    if (deleteBtn) deleteBtn.addEventListener('click', (e) => { e.stopPropagation(); deleteBook(book.id); });
+                }
+
+                elements.booksGrid.appendChild(card);
+            });
+
+            lucide.createIcons();
+        }
+
+        async function renderPdfAsManhwa(pdfDataOrUrl) {
+            elements.manhwaPagesContainer.innerHTML = '';
+            elements.manhwaPagesContainer.classList.remove('hidden');
+            elements.readerIframe.classList.add('hidden');
+            elements.readerLoading.classList.remove('hidden');
+
+            try {
+                let loadingTask;
+                if (typeof pdfDataOrUrl === 'string' && pdfDataOrUrl.startsWith('data:application/pdf;base64,')) {
+                    const base64Data = pdfDataOrUrl.split(',')[1];
+                    const raw = window.atob(base64Data);
+                    const uint8Array = new Uint8Array(raw.length);
+                    for (let i = 0; i < raw.length; i++) {
+                        uint8Array[i] = raw.charCodeAt(i);
+                    }
+                    loadingTask = pdfjsLib.getDocument({ data: uint8Array });
+                } else {
+                    loadingTask = pdfjsLib.getDocument(pdfDataOrUrl);
+                }
+
+                const pdfDoc = await loadingTask.promise;
+                state.activePdfDoc = pdfDoc;
+                elements.readerLoading.classList.add('hidden');
+
+                for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+                    const page = await pdfDoc.getPage(pageNum);
+                    const viewport = page.getViewport({ scale: state.currentScale });
+
+                    const canvas = document.createElement('canvas');
+                    canvas.className = 'manhwa-canvas rounded shadow-md';
+                    const context = canvas.getContext('2d');
+                    
+                    const outputScale = window.devicePixelRatio > 1 ? 1.5 : 1;
+                    canvas.width = Math.floor(viewport.width * outputScale);
+                    canvas.height = Math.floor(viewport.height * outputScale);
+                    canvas.style.width = Math.floor(viewport.width) + "px";
+                    canvas.style.height = Math.floor(viewport.height) + "px";
+
+                    const renderContext = {
+                        canvasContext: context,
+                        transform: outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null,
+                        viewport: viewport
+                    };
+
+                    await page.render(renderContext).promise;
+                    elements.manhwaPagesContainer.appendChild(canvas);
+                }
+            } catch (err) {
+                console.error("PDF Render Error:", err);
+                elements.readerLoading.classList.add('hidden');
+                elements.manhwaPagesContainer.classList.add('hidden');
+                elements.readerIframe.classList.remove('hidden');
+                elements.readerIframe.src = pdfDataOrUrl;
+            }
+        }
+
+        function openReader(book) {
+            elements.readerTitle.innerText = book.title;
+            elements.readerAuthor.innerText = `Penulis: ${book.author || 'Anonim'}`;
+            elements.readerExternalLink.href = book.driveUrl || '#';
+
+            elements.readerModal.classList.remove('hidden');
+            elements.readerModal.classList.add('flex');
+            document.body.style.overflow = 'hidden';
+
+            if (book.pdfData) {
+                renderPdfAsManhwa(book.pdfData);
+            } else if (book.driveUrl) {
+                const previewUrl = transformDriveUrl(book.driveUrl);
+                elements.manhwaPagesContainer.classList.add('hidden');
+                elements.readerLoading.classList.add('hidden');
+                elements.readerIframe.classList.remove('hidden');
+                elements.readerIframe.src = previewUrl;
+            }
+        }
+
+        function closeReader() {
+            elements.readerModal.classList.add('hidden');
+            elements.readerModal.classList.remove('flex');
+            elements.readerIframe.src = '';
+            elements.manhwaPagesContainer.innerHTML = '';
+            state.activePdfDoc = null;
+            document.body.style.overflow = '';
+        }
+
+        async function handleBookUpload(event) {
+            event.preventDefault();
+
+            const submitBtn = elements.submitBookBtn;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> <span>Mengunggah...</span>`;
+            lucide.createIcons();
+
+            try {
+                const sourceTypeRadio = document.querySelector('input[name="sourceType"]:checked');
+                const sourceType = sourceTypeRadio ? sourceTypeRadio.value : 'link';
+
+                const titleInput = document.getElementById('bookTitle');
+                const authorInput = document.getElementById('bookAuthor');
+                const categoryInput = document.getElementById('bookCategory');
+                const readModeInput = document.getElementById('bookReadMode');
+
+                const title = titleInput ? titleInput.value.trim() : '';
+                const author = authorInput ? authorInput.value.trim() : '';
+                const category = categoryInput ? categoryInput.value : 'Manhwa/Komik';
+                const readMode = readModeInput ? readModeInput.value : 'webtoon';
+
+                if (!title || !author) {
+                    showToast("Judul dan Penulis wajib diisi!", "error");
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = `<i data-lucide="check-circle" class="w-3.5 h-3.5"></i> <span>Simpan Buku</span>`;
+                    lucide.createIcons();
+                    return;
+                }
+
+                let pdfData = '';
+                let driveUrl = '';
+                const bookCoverUrlInput = document.getElementById('bookCoverUrl');
+                let coverUrl = bookCoverUrlInput ? bookCoverUrlInput.value.trim() : '';
+
+                const coverFile = elements.coverFileInput ? elements.coverFileInput.files[0] : null;
+                if (coverFile) {
+                    coverUrl = await fileToDataUrl(coverFile);
+                }
+
+                if (sourceType === 'file') {
+                    const pdfFile = elements.pdfFileInput ? elements.pdfFileInput.files[0] : null;
+                    if (!pdfFile) {
+                        showToast("Pilih file PDF terlebih dahulu!", "error");
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = `<i data-lucide="check-circle" class="w-3.5 h-3.5"></i> <span>Simpan Buku</span>`;
+                        lucide.createIcons();
+                        return;
+                    }
+                    if (pdfFile.size > 10 * 1024 * 1024) {
+                        showToast("File PDF lokal >10MB sebaiknya menggunakan Link Google Drive agar bisa disinkronkan antar-perangkat!", "error");
+                    }
+                    pdfData = await fileToDataUrl(pdfFile);
+                } else {
+                    const driveUrlEl = document.getElementById('bookDriveUrl');
+                    driveUrl = driveUrlEl ? driveUrlEl.value.trim() : '';
+                    if (!driveUrl) {
+                        showToast("Masukkan URL Google Drive!", "error");
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = `<i data-lucide="check-circle" class="w-3.5 h-3.5"></i> <span>Simpan Buku</span>`;
+                        lucide.createIcons();
+                        return;
+                    }
+                }
+
+                const newBookData = {
+                    title,
+                    author,
+                    category,
+                    readMode,
+                    driveUrl,
+                    pdfData,
+                    coverUrl,
+                    status: state.isAdmin ? 'approved' : 'pending',
+                    createdAt: serverTimestamp()
+                };
+
+                // Write directly to Firestore Database
+                const booksCollection = collection(db, 'books');
+                await addDoc(booksCollection, newBookData);
+
+                showToast(state.isAdmin ? "Buku berhasil diterbitkan ke cloud!" : "Berhasil diunggah! Menunggu approval petugas.", "success");
+                elements.uploadBookForm.reset();
+                toggleUploadModal(false);
+
+            } catch (err) {
+                console.error("Upload Error:", err);
+                showToast("Gagal mengunggah ke Cloud Firestore: " + err.message, "error");
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<i data-lucide="check-circle" class="w-3.5 h-3.5"></i> <span>Simpan Buku</span>`;
+                lucide.createIcons();
+            }
+        }
+
+        async function approveBook(bookId) {
+            if (!state.isAdmin) return;
+            try {
+                const bookRef = doc(db, 'books', bookId);
+                await updateDoc(bookRef, { status: 'approved' });
+                showToast("Buku berhasil disetujui!", "success");
+            } catch (err) {
+                showToast("Gagal menyetujui buku: " + err.message, "error");
+            }
+        }
+
+        async function deleteBook(bookId) {
+            if (!state.isAdmin) return;
+            try {
+                const bookRef = doc(db, 'books', bookId);
+                await deleteDoc(bookRef);
+                showToast("Buku berhasil dihapus dari cloud", "info");
+            } catch (err) {
+                showToast("Gagal menghapus buku: " + err.message, "error");
+            }
+        }
+
+        function toggleUploadModal(show) {
+            if (show) {
+                elements.uploadModal.classList.remove('opacity-0', 'pointer-events-none');
+                elements.uploadModalContent.classList.remove('scale-95');
+                elements.uploadModalContent.classList.add('scale-100');
+                document.body.style.overflow = 'hidden';
+            } else {
+                elements.uploadModal.classList.add('opacity-0', 'pointer-events-none');
+                elements.uploadModalContent.classList.remove('scale-100');
+                elements.uploadModalContent.classList.add('scale-95');
+                document.body.style.overflow = '';
+            }
+        }
+
+        function setupEventListeners() {
+            elements.roleToggleBtn.addEventListener('click', handleRoleToggleClick);
+            elements.closePinModalBtn.addEventListener('click', () => togglePinModal(false));
+            elements.pinAuthForm.addEventListener('submit', handlePinVerification);
+            elements.openLogoModalBtn.addEventListener('click', () => toggleLogoModal(true));
+            elements.closeLogoModalBtn.addEventListener('click', () => toggleLogoModal(false));
+            elements.logoUploadForm.addEventListener('submit', handleLogoUpload);
+            elements.resetLogoBtn.addEventListener('click', handleResetLogo);
+            elements.openUploadModalBtn.addEventListener('click', () => toggleUploadModal(true));
+            elements.emptyUploadTrigger.addEventListener('click', () => toggleUploadModal(true));
+            elements.closeUploadModalBtn.addEventListener('click', () => toggleUploadModal(false));
+            elements.cancelUploadBtn.addEventListener('click', () => toggleUploadModal(false));
+            elements.uploadBookForm.addEventListener('submit', handleBookUpload);
+            elements.closeReaderBtn.addEventListener('click', closeReader);
+
+            const sourceTypeRadios = document.querySelectorAll('input[name="sourceType"]');
+            sourceTypeRadios.forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    if (e.target.value === 'file') {
+                        elements.pdfFileInputContainer.classList.remove('hidden');
+                        elements.driveUrlInputContainer.classList.add('hidden');
+                    } else {
+                        elements.pdfFileInputContainer.classList.add('hidden');
+                        elements.driveUrlInputContainer.classList.remove('hidden');
+                    }
+                });
+            });
+
+            elements.zoomInBtn.addEventListener('click', () => {
+                state.currentScale += 0.15;
+                elements.zoomLevelText.innerText = `${Math.round(state.currentScale * 100)}%`;
+                if (state.activePdfDoc) renderPdfAsManhwa(state.activePdfDoc);
+            });
+
+            elements.zoomOutBtn.addEventListener('click', () => {
+                if (state.currentScale > 0.6) {
+                    state.currentScale -= 0.15;
+                    elements.zoomLevelText.innerText = `${Math.round(state.currentScale * 100)}%`;
+                    if (state.activePdfDoc) renderPdfAsManhwa(state.activePdfDoc);
+                }
+            });
+
+            const handleSearch = (e) => {
+                state.searchQuery = e.target.value;
+                renderCatalog();
+            };
+            elements.searchInput.addEventListener('input', handleSearch);
+            elements.mobileSearchInput.addEventListener('input', handleSearch);
+
+            const categoryBtns = elements.categoryContainer.querySelectorAll('.category-btn');
+            categoryBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    categoryBtns.forEach(b => {
+                        b.classList.remove('bg-academia-gold', 'text-academia-950', 'font-semibold');
+                        b.classList.add('bg-academia-850', 'text-academia-muted');
+                    });
+                    e.target.classList.remove('bg-academia-850', 'text-academia-muted');
+                    e.target.classList.add('bg-academia-gold', 'text-academia-950', 'font-semibold');
+                    state.activeCategory = e.target.getAttribute('data-category');
+                    renderCatalog();
+                });
+            });
+
+            elements.viewApprovedBtn.addEventListener('click', () => {
+                state.filterApprovedOnly = true;
+                elements.viewApprovedBtn.className = "px-3 py-1 rounded bg-academia-700 text-academia-parchment text-xs font-medium border border-academia-600";
+                elements.viewPendingBtn.className = "px-3 py-1 rounded bg-academia-950 text-academia-muted text-xs font-medium border border-academia-700 hover:text-academia-parchment";
+                renderCatalog();
+            });
+
+            elements.viewPendingBtn.addEventListener('click', () => {
+                if (!state.isAdmin) {
+                    showToast("Buku pending hanya dapat dikelola oleh Petugas", "error");
+                    return;
+                }
+                state.filterApprovedOnly = false;
+                elements.viewPendingBtn.className = "px-3 py-1 rounded bg-academia-700 text-academia-parchment text-xs font-medium border border-academia-600";
+                elements.viewApprovedBtn.className = "px-3 py-1 rounded bg-academia-950 text-academia-muted text-xs font-medium border border-academia-700 hover:text-academia-parchment";
+                renderCatalog();
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            setupEventListeners();
+            initAuthAndStore();
+            lucide.createIcons();
+
+            const splash = document.getElementById('splashScreen');
+            if (splash) {
+                setTimeout(() => {
+                    splash.classList.add('opacity-0');
+                    setTimeout(() => {
+                        splash.classList.add('hidden');
+                        splash.classList.remove('flex');
+                    }, 500);
+                }, 600);
+            }
+        });
+    </script>
+</body>
+</html>
